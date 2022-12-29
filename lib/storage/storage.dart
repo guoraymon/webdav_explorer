@@ -1,14 +1,23 @@
 import 'dart:convert';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:webdav_client/webdav_client.dart';
 
 class Storage {
-  final String name;
-  final String url;
-  final String user;
-  final String pwd;
+  String name;
+  String url;
+  String user;
+  String pwd;
 
   Storage(this.name, this.url, this.user, this.pwd);
+
+  Client? _client;
+
+  Client get client => _client ??= newClient(url, user: user, password: pwd);
+
+  Future<List<File>> readDir(path) async {
+    return client.readDir(path);
+  }
 
   factory Storage.fromJson(Map<String, dynamic> json) {
     return Storage(
@@ -29,7 +38,7 @@ class Storage {
   }
 }
 
-class StorageService extends GetxController {
+class StorageController extends GetxController {
   final _key = 'storage_list';
 
   final _items = [].obs;

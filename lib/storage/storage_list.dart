@@ -16,7 +16,7 @@ class _StorageListState extends State<StorageList> {
 
   @override
   Widget build(BuildContext context) {
-    final storageService = Get.put(StorageService());
+    final storageController = Get.put(StorageController());
     return WillPopScope(
       onWillPop: () async {
         if (_edit) {
@@ -52,9 +52,9 @@ class _StorageListState extends State<StorageList> {
         ),
         body: Obx(
           () => ListView.builder(
-            itemCount: storageService.list().length,
+            itemCount: storageController.list().length,
             itemBuilder: (context, index) {
-              final storage = storageService.get(index);
+              final storage = storageController.get(index);
               return ListTile(
                 title: Text(storage.name),
                 subtitle: Text(storage.url),
@@ -75,7 +75,7 @@ class _StorageListState extends State<StorageList> {
                       _select = index;
                     });
                   } else {
-                    //TODO::goto 详情页
+                    Get.toNamed('file_list', arguments: storage);
                   }
                 },
                 onLongPress: () {
@@ -96,7 +96,14 @@ class _StorageListState extends State<StorageList> {
                       icon: Icons.edit_rounded,
                       label: '编辑',
                       onTap: () {
-                        Get.toNamed('storage_edit', arguments: _select);
+                        Get.toNamed('storage_edit', arguments: _select)
+                            ?.then((res) {
+                          if (res) {
+                            setState(() {
+                              _edit = false;
+                            });
+                          }
+                        });
                       },
                     ),
                   ),
@@ -115,7 +122,9 @@ class _StorageListState extends State<StorageList> {
                                 TextButton(
                                     child: const Text('确认'),
                                     onPressed: () {
-                                      storageService.del(_select).then((value) {
+                                      storageController
+                                          .del(_select)
+                                          .then((value) {
                                         setState(() {
                                           _edit = false;
                                         });

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:webdav_explorer/file/file_list.dart';
+import 'package:webdav_explorer/file/file_preview.dart';
 import 'package:webdav_explorer/storage/storage_add.dart';
 import 'package:webdav_explorer/storage/storage_edit.dart';
 import 'package:webdav_explorer/storage/storage_list.dart';
@@ -24,6 +26,8 @@ class MyApp extends StatelessWidget {
         'storage_list': (context) => const StorageList(),
         'storage_add': (context) => const StorageAdd(),
         'storage_edit': (context) => const StorageEdit(),
+        'file_list': (context) => const FileList(),
+        'file_preview': (context) => const FilePreview(),
       },
     );
   }

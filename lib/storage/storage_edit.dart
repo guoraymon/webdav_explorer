@@ -10,7 +10,7 @@ class StorageEdit extends StatefulWidget {
 }
 
 class _EditStoragePageState extends State<StorageEdit> {
-  final StorageService storageService = Get.put(StorageService());
+  final StorageController storageController = Get.put(StorageController());
 
   final _formKey = GlobalKey<FormState>();
   final nameController = TextEditingController();
@@ -23,11 +23,11 @@ class _EditStoragePageState extends State<StorageEdit> {
       final index = Get.arguments as int;
       final storage = Storage(nameController.text, urlController.text,
           userController.text, pwdController.text);
-      storageService.edit(index, storage).then((value) {
+      storageController.edit(index, storage).then((value) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('保存成功')),
         );
-        Get.back();
+        Get.back(result: true);
       });
     }
   }
@@ -35,7 +35,7 @@ class _EditStoragePageState extends State<StorageEdit> {
   @override
   void initState() {
     super.initState();
-    final storage = storageService.get(Get.arguments as int);
+    final storage = storageController.get(Get.arguments as int);
     nameController.text = storage.name;
     urlController.text = storage.url;
     userController.text = storage.user;

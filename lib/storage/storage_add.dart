@@ -10,7 +10,7 @@ class StorageAdd extends StatefulWidget {
 }
 
 class _StorageAddState extends State<StorageAdd> {
-  final StorageService storageController = Get.put(StorageService());
+  final StorageController storageController = Get.put(StorageController());
 
   final _formKey = GlobalKey<FormState>();
   final nameController = TextEditingController();
