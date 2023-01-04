@@ -17,6 +17,8 @@ class FileList extends StatefulWidget {
 class _FileListState extends State<FileList> {
   late Storage storage;
   var paths = [];
+  final bool _edit = true;
+  final _selects = {};
 
   @override
   initState() {
@@ -26,7 +28,6 @@ class _FileListState extends State<FileList> {
 
   Future<List<File>> _getData() async {
     var files = await storage.readDir(paths.join('/'));
-    print(files);
     return files.where((element) => element.name?.indexOf('.') != 0).toList();
   }
 
@@ -82,45 +83,74 @@ class _FileListState extends State<FileList> {
                       final file = list[index];
                       return InkWell(
                         onTap: () {
-                          if (file.isDir == true) {
+                          if (_edit) {
                             setState(() {
-                              paths.add(file.name);
+                              if (_selects[index] == true) {
+                                _selects.remove(index);
+                              } else {
+                                _selects[index] = true;
+                              }
                             });
-                            return;
-                          }
+                            print(_selects);
+                          } else {
+                            if (file.isDir == true) {
+                              setState(() {
+                                paths.add(file.name);
+                              });
+                              return;
+                            }
 
-                          final mime = lookupMimeType(file.name!);
-                          if (mime?.indexOf('image/') == 0) {
-                            Get.toNamed('file_preview',
-                                arguments: {'storage': storage, 'file': file});
+                            final mime = lookupMimeType(file.name!);
+                            if (mime?.indexOf('image/') == 0) {
+                              Get.toNamed('file_preview', arguments: {
+                                'storage': storage,
+                                'file': file
+                              });
+                            }
                           }
                         },
                         child: GridTile(
-                          child:
-                              lookupMimeType(file.name!)?.indexOf('image/') == 0
-                                  ? Image.network(
-                                      storage.url + file.path!,
-                                      headers: {
-                                        'Authorization':
-                                            'Basic ${base64Encode(utf8.encode('${storage.user}:${storage.pwd}'))}',
-                                      },
-                                      fit: BoxFit.cover,
-                                    )
-                                  : Column(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        Icon(
-                                            file.isDir == true
-                                                ? Icons.folder_rounded
-                                                : Icons.question_mark_rounded,
-                                            size: 64),
-                                        Text(
-                                          file.name!,
-                                          textAlign: TextAlign.center,
-                                        ),
-                                      ],
-                                    ),
+                          child: Stack(
+                            alignment: AlignmentDirectional.center,
+                            children: [
+                              Container(
+                                child: lookupMimeType(file.name!)
+                                            ?.indexOf('image/') ==
+                                        0
+                                    ? Image.network(
+                                        storage.url + file.path!,
+                                        headers: {
+                                          'Authorization':
+                                              'Basic ${base64Encode(utf8.encode('${storage.user}:${storage.pwd}'))}',
+                                        },
+                                        fit: BoxFit.cover,
+                                      )
+                                    : Column(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Icon(
+                                              file.isDir == true
+                                                  ? Icons.folder_rounded
+                                                  : Icons.question_mark_rounded,
+                                              size: 64),
+                                          Text(
+                                            file.name!,
+                                            textAlign: TextAlign.center,
+                                          ),
+                                        ],
+                                      ),
+                              ),
+                              Positioned(
+                                top: 0,
+                                left: 0,
+                                child: Checkbox(
+                                  value: _selects[index] ?? false,
+                                  onChanged: (bool? value) {},
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       );
                     },
