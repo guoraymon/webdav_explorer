@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import 'package:mime/mime.dart';
 import 'package:webdav_client/webdav_client.dart';
 
+import '../common/label_button.dart';
 import '../storage/storage.dart';
 
 class FileList extends StatefulWidget {
@@ -17,18 +18,69 @@ class FileList extends StatefulWidget {
 class _FileListState extends State<FileList> {
   late Storage storage;
   var paths = [];
-  final bool _edit = true;
+  bool _edit = false;
   final _selects = {};
+  late Future<List<File>> _futureBuilderFuture;
 
   @override
   initState() {
     storage = Get.arguments as Storage;
+    _futureBuilderFuture = _getData();
     super.initState();
   }
 
   Future<List<File>> _getData() async {
     var files = await storage.readDir(paths.join('/'));
     return files.where((element) => element.name?.indexOf('.') != 0).toList();
+  }
+
+  createDir() {
+    final formKey = GlobalKey<FormState>();
+    final nameController = TextEditingController();
+    Future.delayed(
+      Duration.zero,
+      () => showDialog(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            title: const Text('新建文件夹'),
+            content: Form(
+              key: formKey,
+              child: TextFormField(
+                controller: nameController,
+                decoration: const InputDecoration(labelText: '文件夹名称'),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return '文件夹名称不能为空';
+                  }
+                  return null;
+                },
+              ),
+            ),
+            actions: [
+              TextButton(
+                child: const Text('确定'),
+                onPressed: () {
+                  if (formKey.currentState!.validate()) {
+                    storage.client
+                        .mkdir([...paths, nameController.text].join('/'))
+                        .then((value) {
+                      setState(() {
+                        _futureBuilderFuture = _getData();
+                      });
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('新建文件夹成功')),
+                      );
+                      Navigator.pop(context);
+                    });
+                  }
+                },
+              ),
+            ],
+          );
+        },
+      ),
+    );
   }
 
   @override
@@ -38,6 +90,7 @@ class _FileListState extends State<FileList> {
         if (paths.isNotEmpty) {
           setState(() {
             paths.removeLast();
+            _futureBuilderFuture = _getData();
           });
           return false;
         }
@@ -46,11 +99,35 @@ class _FileListState extends State<FileList> {
       child: Scaffold(
         appBar: AppBar(
           title: Text(paths.isNotEmpty ? paths.last : storage.name),
+          actions: [
+            _edit
+                ? TextButton(
+                    onPressed: () {
+                      setState(() {
+                        _edit = false;
+                        _selects.clear();
+                      });
+                    },
+                    child: const Text('取消'),
+                  )
+                : PopupMenuButton(
+                    itemBuilder: (BuildContext context1) => [
+                      PopupMenuItem(
+                        onTap: createDir,
+                        child: const Text('新建文件夹'),
+                      ),
+                      PopupMenuItem(
+                        child: const Text('上传文件'),
+                        onTap: () {},
+                      ),
+                    ],
+                  )
+          ],
         ),
         body: Padding(
           padding: const EdgeInsets.all(8),
           child: FutureBuilder(
-            future: _getData(),
+            future: _futureBuilderFuture,
             builder:
                 (BuildContext context, AsyncSnapshot<List<File>> snapshot) {
               var list = snapshot.data ?? [];
@@ -91,11 +168,11 @@ class _FileListState extends State<FileList> {
                                 _selects[index] = true;
                               }
                             });
-                            print(_selects);
                           } else {
                             if (file.isDir == true) {
                               setState(() {
                                 paths.add(file.name);
+                                _futureBuilderFuture = _getData();
                               });
                               return;
                             }
@@ -108,6 +185,12 @@ class _FileListState extends State<FileList> {
                               });
                             }
                           }
+                        },
+                        onLongPress: () {
+                          setState(() {
+                            _edit = true;
+                            _selects[index] = true;
+                          });
                         },
                         child: GridTile(
                           child: Stack(
@@ -141,14 +224,15 @@ class _FileListState extends State<FileList> {
                                         ],
                                       ),
                               ),
-                              Positioned(
-                                top: 0,
-                                left: 0,
-                                child: Checkbox(
-                                  value: _selects[index] ?? false,
-                                  onChanged: (bool? value) {},
+                              if (_edit)
+                                Positioned(
+                                  top: 0,
+                                  left: 0,
+                                  child: Checkbox(
+                                    value: _selects[index] ?? false,
+                                    onChanged: (bool? value) {},
+                                  ),
                                 ),
-                              ),
                             ],
                           ),
                         ),
@@ -159,6 +243,45 @@ class _FileListState extends State<FileList> {
             },
           ),
         ),
+        bottomNavigationBar: _edit
+            ? Row(
+                children: [
+                  Expanded(
+                    child: LabelButton(
+                      icon: Icons.move_up_rounded,
+                      label: '移动',
+                      onTap: _selects.isNotEmpty
+                          ? () {
+                              print('移动');
+                            }
+                          : null,
+                    ),
+                  ),
+                  Expanded(
+                    child: LabelButton(
+                      icon: Icons.copy_rounded,
+                      label: '复制',
+                      onTap: _selects.isNotEmpty
+                          ? () {
+                              print('复制');
+                            }
+                          : null,
+                    ),
+                  ),
+                  Expanded(
+                    child: LabelButton(
+                      icon: Icons.delete_rounded,
+                      label: '删除',
+                      onTap: _selects.isNotEmpty
+                          ? () {
+                              print('删除');
+                            }
+                          : null,
+                    ),
+                  ),
+                ],
+              )
+            : null,
       ),
     );
   }
