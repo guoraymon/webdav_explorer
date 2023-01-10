@@ -5,6 +5,7 @@ import 'package:webdav_explorer/file/file_preview.dart';
 import 'package:webdav_explorer/storage/storage_add.dart';
 import 'package:webdav_explorer/storage/storage_edit.dart';
 import 'package:webdav_explorer/storage/storage_list.dart';
+import 'package:webdav_explorer/task/task_list.dart';
 
 void main() {
   runApp(const MyApp());
@@ -28,6 +29,7 @@ class MyApp extends StatelessWidget {
         'storage_edit': (context) => const StorageEdit(),
         'file_list': (context) => const FileList(),
         'file_preview': (context) => const FilePreview(),
+        'task_list': (context) => const TaskList(),
       },
     );
   }

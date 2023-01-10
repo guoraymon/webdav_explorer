@@ -5,16 +5,11 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:mime/mime.dart';
 import 'package:webdav_client/webdav_client.dart';
+import 'package:webdav_explorer/task/task_list.dart';
 
 import '../common/label_button.dart';
 import '../storage/storage.dart';
-
-class Upload {
-  String name;
-  int progress = 0;
-
-  Upload(this.name);
-}
+import '../task/task.dart';
 
 class FileList extends StatefulWidget {
   const FileList({Key? key}) : super(key: key);
@@ -30,7 +25,6 @@ class _FileListState extends State<FileList> {
   final _selects = {};
 
   late AsyncSnapshot<List<File>> _snapshot;
-  final List<Upload> uploadList = [];
 
   @override
   initState() {
@@ -148,24 +142,25 @@ class _FileListState extends State<FileList> {
 
   /// Remove a folder or file
   upload() {
+    final uploadTaskController = Get.put(UploadTaskController());
     openFiles().then((list) {
       for (var xFile in list) {
-        print(xFile.path);
-        print([...paths, xFile.name].join('/'));
-        final upload = Upload(xFile.name);
-        storage.client.writeFromFile(
-            xFile.path, [...paths, xFile.name].join('/'), onProgress: (c, t) {
+        final uploadTask = Task(xFile.name);
+        storage.client
+            .writeFromFile(xFile.path, [...paths, xFile.name].join('/'),
+                onProgress: (count, total) {
           setState(() {
-            upload.progress = ((c / t) * 100).toInt();
+            uploadTask.count = count;
+            uploadTask.total = total;
           });
-          print(upload.progress);
         });
-        uploadList.add(upload);
+        uploadTaskController.add(uploadTask);
       }
     });
   }
 
   test() {
+    final uploadTaskController = Get.put(UploadTaskController());
     showDialog(
       context: context,
       builder: (context) {
@@ -175,12 +170,14 @@ class _FileListState extends State<FileList> {
               width: 300,
               height: 300,
               child: ListView.builder(
-                itemCount: uploadList.length,
+                itemCount: uploadTaskController.length(),
                 itemBuilder: (context, index) {
+                  final uploadTask = uploadTaskController.get(index);
                   return Row(
                     children: [
-                      Text(uploadList[index].name),
-                      Text('${uploadList[index].progress}%'),
+                      Text(uploadTask.name),
+                      Text(
+                          '${(uploadTask.count / uploadTask.total * 100).toInt()}%'),
                     ],
                   );
                 },
@@ -216,11 +213,6 @@ class _FileListState extends State<FileList> {
         appBar: AppBar(
           title: Text(paths.isNotEmpty ? paths.last : storage.name),
           actions: [
-            TextButton(
-                onPressed: () {
-                  Future.delayed(Duration.zero, () => test());
-                },
-                child: const Text('测试')),
             _edit
                 ? TextButton(
                     onPressed: () {
@@ -231,19 +223,35 @@ class _FileListState extends State<FileList> {
                     },
                     child: const Text('取消'),
                   )
-                : PopupMenuButton(
-                    itemBuilder: (BuildContext context1) => [
-                      PopupMenuItem(
-                        onTap: () {
-                          Future.delayed(Duration.zero, () => mkdir());
+                : Row(
+                    children: [
+                      TextButton(
+                        onPressed: () {
+                          Future.delayed(Duration.zero, () => test());
                         },
-                        child: const Text('新建文件夹'),
+                        child: const Text('测试'),
                       ),
-                      PopupMenuItem(
-                        child: const Text('上传文件'),
-                        onTap: () {
-                          Future.delayed(Duration.zero, () => upload());
+                      IconButton(
+                        icon: const Icon(Icons.task_rounded),
+                        onPressed: () {
+                          Get.toNamed('task_list');
                         },
+                      ),
+                      PopupMenuButton(
+                        itemBuilder: (BuildContext context1) => [
+                          PopupMenuItem(
+                            onTap: () {
+                              Future.delayed(Duration.zero, () => mkdir());
+                            },
+                            child: const Text('新建文件夹'),
+                          ),
+                          PopupMenuItem(
+                            child: const Text('上传文件'),
+                            onTap: () {
+                              Future.delayed(Duration.zero, () => upload());
+                            },
+                          ),
+                        ],
                       ),
                     ],
                   ),
