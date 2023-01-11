@@ -145,13 +145,13 @@ class _FileListState extends State<FileList> {
     final uploadTaskController = Get.put(UploadTaskController());
     openFiles().then((list) {
       for (var xFile in list) {
-        final uploadTask = Task(xFile.name);
+        final uploadTask = Task(xFile.name).obs;
         storage.client
             .writeFromFile(xFile.path, [...paths, xFile.name].join('/'),
                 onProgress: (count, total) {
-          setState(() {
-            uploadTask.count = count;
-            uploadTask.total = total;
+          uploadTask.update((val) {
+            val?.count = count;
+            val?.total = total;
           });
         });
         uploadTaskController.add(uploadTask);
@@ -175,9 +175,9 @@ class _FileListState extends State<FileList> {
                   final uploadTask = uploadTaskController.get(index);
                   return Row(
                     children: [
-                      Text(uploadTask.name),
+                      Text(uploadTask.value.name),
                       Text(
-                          '${(uploadTask.count / uploadTask.total * 100).toInt()}%'),
+                          '${(uploadTask.value.count / uploadTask.value.total * 100).toInt()}%'),
                     ],
                   );
                 },

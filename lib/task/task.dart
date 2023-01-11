@@ -24,11 +24,11 @@ abstract class TaskController extends GetxController {
     return _items.length;
   }
 
-  Task get(index) {
+  Rx<Task> get(index) {
     return _items[index];
   }
 
-  add(Task item) {
+  add(Rx<Task> item) {
     _items.add(item);
   }
 }

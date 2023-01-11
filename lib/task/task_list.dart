@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:webdav_explorer/task/task.dart';
 
+import '../common/helper.dart';
+
 class TaskList extends StatefulWidget {
   const TaskList({Key? key}) : super(key: key);
 
@@ -20,7 +22,7 @@ class _TaskListState extends State<TaskList> {
           title: const Text('任务中心'),
           bottom: const TabBar(
             tabs: [
-              Tab(icon: Icon(Icons.upload_file_rounded, color: Colors.black)),
+              Tab(icon: Icon(Icons.upload_rounded, color: Colors.black)),
               Tab(icon: Icon(Icons.downloading_rounded, color: Colors.black)),
             ],
           ),
@@ -32,12 +34,12 @@ class _TaskListState extends State<TaskList> {
                 itemCount: uploadTaskController.length(),
                 itemBuilder: (context, index) {
                   final uploadTask = uploadTaskController.get(index);
-                  return Row(
-                    children: [
-                      Text(uploadTask.name),
-                      Text(
-                          '${(uploadTask.count / uploadTask.total * 100).toInt()}%'),
-                    ],
+                  final per =
+                      (uploadTask.value.count / uploadTask.value.total * 100).toInt();
+                  return ListTile(
+                    title: Text(uploadTask.value.name),
+                    subtitle: Text(
+                        '${humanReadableByte(uploadTask.value.count)}/${humanReadableByte(uploadTask.value.total)} $per%'),
                   );
                 },
               ),
