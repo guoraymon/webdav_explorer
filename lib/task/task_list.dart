@@ -14,7 +14,7 @@ class TaskList extends StatefulWidget {
 class _TaskListState extends State<TaskList> {
   @override
   Widget build(BuildContext context) {
-    final uploadTaskController = Get.put(UploadTaskController());
+    final taskController = Get.put(TaskController());
     return DefaultTabController(
       length: 2,
       child: Scaffold(
@@ -31,15 +31,14 @@ class _TaskListState extends State<TaskList> {
           () => TabBarView(
             children: [
               ListView.builder(
-                itemCount: uploadTaskController.length(),
+                itemCount: taskController.uploads.length,
                 itemBuilder: (context, index) {
-                  final uploadTask = uploadTaskController.get(index);
-                  final per =
-                      (uploadTask.value.count / uploadTask.value.total * 100).toInt();
+                  final task = taskController.uploads[index];
+                  final per = (task.count / task.total * 100).toInt();
                   return ListTile(
-                    title: Text(uploadTask.value.name),
+                    title: Text(task.name),
                     subtitle: Text(
-                        '${humanReadableByte(uploadTask.value.count)}/${humanReadableByte(uploadTask.value.total)} $per%'),
+                        '${humanReadableByte(task.count)}/${humanReadableByte(task.total)} $per%'),
                   );
                 },
               ),

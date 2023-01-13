@@ -142,49 +142,26 @@ class _FileListState extends State<FileList> {
 
   /// Remove a folder or file
   upload() {
-    final uploadTaskController = Get.put(UploadTaskController());
+    final taskController = Get.put(TaskController());
     openFiles().then((list) {
       for (var xFile in list) {
-        final uploadTask = Task(xFile.name).obs;
-        storage.client
-            .writeFromFile(xFile.path, [...paths, xFile.name].join('/'),
-                onProgress: (count, total) {
-          uploadTask.update((val) {
-            val?.count = count;
-            val?.total = total;
-          });
-        });
-        uploadTaskController.add(uploadTask);
+        final task = Task(xFile.name);
+        storage.client.writeFromFile(
+          xFile.path,
+          [...paths, xFile.name].join('/'),
+          onProgress: (count, total) {
+            task.count = count;
+            task.total = total;
+            taskController.uploads.refresh();
+          },
+        );
+        taskController.uploads.add(task);
       }
     });
   }
 
   test() {
-    final uploadTaskController = Get.put(UploadTaskController());
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-            title: const Text('上传进度'),
-            content: SizedBox(
-              width: 300,
-              height: 300,
-              child: ListView.builder(
-                itemCount: uploadTaskController.length(),
-                itemBuilder: (context, index) {
-                  final uploadTask = uploadTaskController.get(index);
-                  return Row(
-                    children: [
-                      Text(uploadTask.value.name),
-                      Text(
-                          '${(uploadTask.value.count / uploadTask.value.total * 100).toInt()}%'),
-                    ],
-                  );
-                },
-              ),
-            ));
-      },
-    );
+    Get.toNamed('test');
   }
 
   @override

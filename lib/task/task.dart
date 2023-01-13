@@ -13,26 +13,7 @@ enum TaskType {
   upload,
 }
 
-abstract class TaskController extends GetxController {
-  final _items = [].obs;
-
-  RxList list() {
-    return _items;
-  }
-
-  int length() {
-    return _items.length;
-  }
-
-  Rx<Task> get(index) {
-    return _items[index];
-  }
-
-  add(Rx<Task> item) {
-    _items.add(item);
-  }
+class TaskController extends GetxController {
+  final uploads = [].obs;
+  final downloads = [].obs;
 }
-
-class UploadTaskController extends TaskController {}
-
-class DownloadTaskController extends TaskController {}
