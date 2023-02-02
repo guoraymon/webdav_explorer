@@ -23,7 +23,7 @@ class _TaskListState extends State<TaskList> {
           bottom: const TabBar(
             tabs: [
               Tab(icon: Icon(Icons.upload_rounded, color: Colors.black)),
-              Tab(icon: Icon(Icons.downloading_rounded, color: Colors.black)),
+              Tab(icon: Icon(Icons.download_rounded, color: Colors.black)),
             ],
           ),
         ),
@@ -38,7 +38,7 @@ class _TaskListState extends State<TaskList> {
                   return ListTile(
                     title: Text(task.name),
                     subtitle: Text(
-                        '${humanReadableByte(task.count)}/${humanReadableByte(task.total)} $per%'),
+                        '${task.path} ${humanReadableByte(task.count)}/${humanReadableByte(task.total)} $per%'),
                   );
                 },
               ),

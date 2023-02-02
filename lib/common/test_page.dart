@@ -22,7 +22,7 @@ class _TestPageState extends State<TestPage> {
         actions: [
           TextButton(
               onPressed: () {
-                final task = Task('测试1');
+                final task = Task('测试1', '/测试');
                 taskController.uploads.add(task);
 
                 int count = 0;

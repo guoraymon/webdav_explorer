@@ -145,10 +145,11 @@ class _FileListState extends State<FileList> {
     final taskController = Get.put(TaskController());
     openFiles().then((list) {
       for (var xFile in list) {
-        final task = Task(xFile.name);
+        final uploadPath = [...paths, xFile.name].join('/');
+        final task = Task(xFile.name, uploadPath);
         storage.client.writeFromFile(
           xFile.path,
-          [...paths, xFile.name].join('/'),
+          uploadPath,
           onProgress: (count, total) {
             task.count = count;
             task.total = total;

@@ -2,10 +2,11 @@ import 'package:get/get.dart';
 
 class Task {
   String name;
+  String path;
   int count = 0;
   int total = 0;
 
-  Task(this.name);
+  Task(this.name, this.path);
 }
 
 enum TaskType {
