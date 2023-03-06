@@ -153,7 +153,6 @@ class _FileListState extends State<FileList> {
           onProgress: (count, total) {
             task.count = count;
             task.total = total;
-            taskController.uploads.refresh();
           },
         );
         taskController.uploads.add(task);

@@ -7,8 +7,6 @@ import 'package:webdav_explorer/storage/storage_edit.dart';
 import 'package:webdav_explorer/storage/storage_list.dart';
 import 'package:webdav_explorer/task/task_list.dart';
 
-import 'common/test_page.dart';
-
 void main() {
   runApp(const MyApp());
 }
@@ -32,7 +30,6 @@ class MyApp extends StatelessWidget {
         'file_list': (context) => const FileList(),
         'file_preview': (context) => const FilePreview(),
         'task_list': (context) => const TaskList(),
-        'test': (context) => const TestPage(),
       },
     );
   }

@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:gap/gap.dart';
 import 'package:get/get.dart';
 import 'package:webdav_explorer/task/task.dart';
 
@@ -12,6 +15,26 @@ class TaskList extends StatefulWidget {
 }
 
 class _TaskListState extends State<TaskList> {
+  late Timer _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    final taskController = Get.put(TaskController());
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      for (var task in taskController.uploads as RxList<Task>) {
+        task.refreshSpeed();
+      }
+      taskController.uploads.refresh();
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer.cancel();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final taskController = Get.put(TaskController());
@@ -33,12 +56,34 @@ class _TaskListState extends State<TaskList> {
               ListView.builder(
                 itemCount: taskController.uploads.length,
                 itemBuilder: (context, index) {
-                  final task = taskController.uploads[index];
-                  final per = (task.count / task.total * 100).toInt();
+                  final Task task = taskController.uploads[index];
                   return ListTile(
                     title: Text(task.name),
-                    subtitle: Text(
-                        '${task.path} ${humanReadableByte(task.count)}/${humanReadableByte(task.total)} $per%'),
+                    subtitle: Column(
+                      children: [
+                        LinearProgressIndicator(value: task.getProgress()),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                                '${prettyBytes(task.count.toDouble())}/${prettyBytes(task.total.toDouble())}'),
+                            task.isFinish()
+                                ? const Text('已完成')
+                                : Row(
+                                    children: [
+                                      Text(
+                                          '${prettyBytes(task.speed.toDouble())}/s'),
+                                      const Gap(4),
+                                      Text(task.speed > 0
+                                          ? prettySeconds(
+                                              task.getRemain() ~/ task.speed)
+                                          : '未知')
+                                    ],
+                                  )
+                          ],
+                        ),
+                      ],
+                    ),
                   );
                 },
               ),
