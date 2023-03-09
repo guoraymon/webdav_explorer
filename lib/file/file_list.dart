@@ -156,12 +156,14 @@ class _FileListState extends State<FileList> {
           },
         );
         taskController.uploads.add(task);
+
+        Get.toNamed('task_list');
       }
     });
   }
 
   test() {
-    Get.toNamed('test');
+
   }
 
   @override
