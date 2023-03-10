@@ -25,7 +25,7 @@ class _TaskListState extends State<TaskList> {
     super.initState();
     final taskController = Get.put(TaskController());
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      for (var task in taskController.uploads as RxList<Task>) {
+      for (var task in taskController.uploads) {
         task.refreshSpeed();
       }
       taskController.uploads.refresh();
@@ -71,7 +71,7 @@ class _TaskListState extends State<TaskList> {
               ListView.builder(
                 itemCount: taskController.uploads.length,
                 itemBuilder: (context, index) {
-                  final Task task = taskController.uploads[index];
+                  final UploadTask task = taskController.uploads[index];
                   return TaskWidget(
                     task: task,
                     edit: _edit,
@@ -112,7 +112,7 @@ class TaskWidget extends StatelessWidget {
     this.onLongPress,
   }) : super(key: key);
 
-  final Task task;
+  final UploadTask task;
   final bool edit;
   final bool select;
   final ValueChanged<bool?>? onSelect;
@@ -123,7 +123,7 @@ class TaskWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListTile(
       leading: edit ? Checkbox(value: select, onChanged: onSelect) : null,
-      title: Text(task.name),
+      title: Text(task.remotePath),
       subtitle: Column(
         children: [
           LinearProgressIndicator(value: task.getProgress()),
@@ -132,9 +132,7 @@ class TaskWidget extends StatelessWidget {
             children: [
               Text(
                   '${prettyBytes(task.count.toDouble())}/${prettyBytes(task.total.toDouble())}'),
-              if (task.isFinish())
-                const Text('已完成')
-              else
+              if (task.state == TaskState.running)
                 Row(
                   children: [
                     Text('${prettyBytes(task.speed.toDouble())}/s'),
@@ -144,12 +142,61 @@ class TaskWidget extends StatelessWidget {
                         : '未知')
                   ],
                 )
+              else if (task.state == TaskState.completed)
+                const Text('已完成')
             ],
           ),
         ],
       ),
-      onTap: onTap,
+      trailing: TaskActionWidget(task),
+      onTap: () {
+        if (edit) {
+          onSelect!(!select);
+        } else {
+          onTap!();
+        }
+      },
       onLongPress: onLongPress,
     );
+  }
+}
+
+class TaskActionWidget extends StatelessWidget {
+  const TaskActionWidget(this.task, {Key? key}) : super(key: key);
+
+  final UploadTask task;
+
+  @override
+  Widget build(BuildContext context) {
+    switch (task.state) {
+      case TaskState.running:
+        return IconButton(
+          icon: const Icon(Icons.cancel_rounded),
+          tooltip: '取消',
+          onPressed: () {
+            task.cancel();
+          },
+        );
+      case TaskState.completed:
+        return IconButton(
+          icon: const Icon(Icons.done_rounded),
+          tooltip: '已完成',
+          onPressed: () {},
+        );
+      case TaskState.cancelled:
+        return IconButton(
+          icon: const Icon(Icons.refresh_rounded),
+          tooltip: '重试',
+          onPressed: () {
+            task.upload(task.localPath, task.remotePath);
+          },
+        );
+      default:
+        return IconButton(
+          icon: const Icon(Icons.error_rounded),
+          tooltip: '出错了',
+          onPressed: () {},
+        );
+    }
   }
 }

@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:dio/dio.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -146,25 +147,29 @@ class _FileListState extends State<FileList> {
     openFiles().then((list) {
       for (var xFile in list) {
         final uploadPath = [...paths, xFile.name].join('/');
-        final task = Task(xFile.name, uploadPath);
-        storage.client.writeFromFile(
-          xFile.path,
-          uploadPath,
-          onProgress: (count, total) {
-            task.count = count;
-            task.total = total;
-          },
-        );
-        taskController.uploads.add(task);
+
+        final uploadTask = UploadTask(storage.client);
+        uploadTask.upload(xFile.path, uploadPath);
+
+        // CancelToken cancelToken = CancelToken();
+        // final task = Task(xFile.name, uploadPath, cancelToken: cancelToken);
+        // storage.client.writeFromFile(
+        //   xFile.path,
+        //   uploadPath,
+        //   onProgress: (count, total) {
+        //     task.count = count;
+        //     task.total = total;
+        //   },
+        //   cancelToken: cancelToken,
+        // );
+        taskController.uploads.add(uploadTask);
 
         Get.toNamed('task_list');
       }
     });
   }
 
-  test() {
-
-  }
+  test() {}
 
   @override
   Widget build(BuildContext context) {
