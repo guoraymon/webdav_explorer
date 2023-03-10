@@ -188,7 +188,7 @@ class TaskActionWidget extends StatelessWidget {
           icon: const Icon(Icons.refresh_rounded),
           tooltip: '重试',
           onPressed: () {
-            task.upload(task.localPath, task.remotePath);
+            task.start();
           },
         );
       default:

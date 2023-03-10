@@ -24,7 +24,13 @@ class UploadTask {
 
   /// 上传
   upload(String localPath, String remotePath) {
+    this.localPath = localPath;
     this.remotePath = remotePath;
+    start();
+  }
+
+  start() {
+    state = TaskState.running;
     _cancelToken = CancelToken();
     client.writeFromFile(
       localPath,
@@ -38,18 +44,15 @@ class UploadTask {
       },
       cancelToken: _cancelToken,
     );
-    state = TaskState.running;
-    this.localPath = localPath;
-    this.remotePath = remotePath;
-  }
-
-  bool isFinish() {
-    return state == TaskState.completed;
   }
 
   cancel() {
     _cancelToken.cancel();
     state = TaskState.cancelled;
+  }
+
+  bool isFinish() {
+    return state == TaskState.completed;
   }
 
   void refreshSpeed() {
