@@ -1,6 +1,13 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:get/get.dart';
 import 'package:webdav_client/webdav_client.dart';
+
+enum TaskType {
+  download,
+  upload,
+}
 
 enum TaskState {
   none,
@@ -9,115 +16,76 @@ enum TaskState {
   cancelled,
 }
 
-class UploadTask {
+class UploadTask extends GetxController {
   Client client;
-  TaskState state = TaskState.none;
-  late String localPath;
-  late String remotePath;
+
+  Rx<TaskState> state = TaskState.none.obs;
+  String localPath;
+  String remotePath;
   late CancelToken _cancelToken;
-  int count = 0;
-  int total = 0;
-  int speed = 0;
-  int _speedCount = 0;
 
-  UploadTask(this.client);
+  RxDouble total = 0.0.obs;
+  RxDouble count = 0.0.obs;
+  RxDouble speed = 0.0.obs;
 
-  /// 上传
-  upload(String localPath, String remotePath) {
-    this.localPath = localPath;
-    this.remotePath = remotePath;
-    start();
-  }
+  Timer? _timer;
+  double _lastCount = 0.0;
 
-  start() {
-    state = TaskState.running;
+  UploadTask(this.client, this.localPath, this.remotePath);
+
+  void start() {
+    state.value = TaskState.running;
+    count.value = 0;
+    total.value = 0;
+    speed.value = 0;
+    _lastCount = 0;
+
     _cancelToken = CancelToken();
     client.writeFromFile(
       localPath,
       remotePath,
       onProgress: (c, t) {
-        count = c;
-        total = t;
+        count.value = c.toDouble();
+        total.value = t.toDouble();
         if (c == t) {
-          state = TaskState.completed;
+          state.value = TaskState.completed;
+          _timer?.cancel();
+          _timer = null;
         }
       },
       cancelToken: _cancelToken,
     );
+
+    _timer ??= Timer.periodic(const Duration(seconds: 1), (_) {
+      speed.value = count.value - _lastCount;
+      _lastCount = count.value;
+    });
   }
 
-  cancel() {
+  void cancel() {
+    state.value = TaskState.cancelled;
     _cancelToken.cancel();
-    state = TaskState.cancelled;
-  }
-
-  bool isFinish() {
-    return state == TaskState.completed;
-  }
-
-  void refreshSpeed() {
-    speed = count - _speedCount;
-    _speedCount = count;
+    _timer?.cancel();
+    _timer = null;
   }
 
   /// 获取进度
   double getProgress() {
-    if (count > 0 && total > 0) {
-      return count / total;
+    if (total.value > 0) {
+      return count.value / total.value;
     }
     return 0;
   }
 
-  /// 获取剩余
-  int getRemain() {
-    return total - count;
+  /// 获取预计剩余时间
+  getETA() {
+    return (total.value - count.value) ~/ speed.value;
   }
-}
-
-class Task {
-  TaskState state = TaskState.none;
-
-  String name;
-  String path;
-  int count = 0;
-  int _count = 0;
-  int total = 0;
-  int speed = 0;
-
-  CancelToken? cancelToken;
-
-  Task(this.name, this.path, {this.cancelToken}) {
-    state = TaskState.running;
-  }
-
-  void refreshSpeed() {
-    speed = count - _count;
-    _count = count;
-  }
-
-  bool isFinish() {
-    return count >= total;
-  }
-
-  double getProgress() {
-    return count / total;
-  }
-
-  int getRemain() {
-    return total - count;
-  }
-
-  cancel() {
-    cancelToken?.cancel();
-  }
-}
-
-enum TaskType {
-  download,
-  upload,
 }
 
 class TaskController extends GetxController {
-  final RxList<UploadTask> uploads = <UploadTask>[].obs;
+  var uploads = <UploadTask>[].obs;
+
+  ///dev
   final downloads = [].obs;
 }

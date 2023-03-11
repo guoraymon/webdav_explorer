@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:mime/mime.dart';
 import 'package:webdav_client/webdav_client.dart';
-import 'package:webdav_explorer/task/task_list.dart';
+import 'package:webdav_explorer/task/task_page.dart';
 
 import '../common/label_button.dart';
 import '../storage/storage.dart';
@@ -147,24 +147,11 @@ class _FileListState extends State<FileList> {
     openFiles().then((list) {
       for (var xFile in list) {
         final uploadPath = [...paths, xFile.name].join('/');
-
-        final uploadTask = UploadTask(storage.client);
-        uploadTask.upload(xFile.path, uploadPath);
-
-        // CancelToken cancelToken = CancelToken();
-        // final task = Task(xFile.name, uploadPath, cancelToken: cancelToken);
-        // storage.client.writeFromFile(
-        //   xFile.path,
-        //   uploadPath,
-        //   onProgress: (count, total) {
-        //     task.count = count;
-        //     task.total = total;
-        //   },
-        //   cancelToken: cancelToken,
-        // );
+        final uploadTask = UploadTask(storage.client, xFile.path, uploadPath);
+        uploadTask.start();
         taskController.uploads.add(uploadTask);
 
-        Get.toNamed('task_list');
+        Get.toNamed('taskPage');
       }
     });
   }
@@ -218,7 +205,7 @@ class _FileListState extends State<FileList> {
                       IconButton(
                         icon: const Icon(Icons.task_rounded),
                         onPressed: () {
-                          Get.toNamed('task_list');
+                          Get.toNamed('taskPage');
                         },
                       ),
                       PopupMenuButton(
