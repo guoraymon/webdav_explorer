@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:get/get.dart';
-import 'package:webdav_explorer/task/task.dart';
+import 'package:webdav_explorer/common/helper.dart';
 
-import '../common/helper.dart';
+import 'task.dart';
 
 class TaskPage extends StatefulWidget {
   const TaskPage({Key? key}) : super(key: key);
@@ -12,76 +12,109 @@ class TaskPage extends StatefulWidget {
   State<TaskPage> createState() => _TaskPageState();
 }
 
-class _TaskPageState extends State<TaskPage> {
+class _TaskPageState extends State<TaskPage> with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+  late TaskController _taskController;
+
   bool _edit = false;
   final Map<int, bool> _selects = {};
 
   @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(vsync: this, length: 2);
+    _taskController = Get.put(TaskController());
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 2,
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('任务中心'),
-          actions: [
-            if (_edit)
-              TextButton(
-                child: const Text('取消'),
-                onPressed: () {
-                  setState(() {
-                    _edit = false;
-                    _selects.clear();
-                  });
-                },
-              ),
-          ],
-          bottom: const TabBar(
-            tabs: [
-              Tab(icon: Icon(Icons.upload_rounded, color: Colors.black)),
-              Tab(icon: Icon(Icons.download_rounded, color: Colors.black)),
-            ],
-          ),
-        ),
-        body: TabBarView(
-          children: [
-            TaskList(
-              edit: _edit,
-              selects: _selects,
-              onSelect: (index, value) {
-                setState(() {
-                  _edit = true;
-                  _selects[index] = value;
-                });
-              },
-            ),
-            const Center(
-              child: Text('下载任务'),
-            ),
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('任务中心'),
+        actions: _buildActions(),
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: const [
+            Tab(text: '上传'),
+            Tab(text: '下载'),
           ],
         ),
       ),
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          TaskList(
+            tasks: _taskController.uploads,
+            edit: _edit,
+            selects: _selects,
+            onSelect: (index, value) {
+              setState(() {
+                _edit = true;
+                _selects[index] = value;
+              });
+            },
+          ),
+          TaskList(
+            tasks: _taskController.downloads,
+            edit: _edit,
+            selects: _selects,
+            onSelect: (index, value) {
+              setState(() {
+                _edit = true;
+                _selects[index] = value;
+              });
+            },
+          ),
+        ],
+      ),
     );
+  }
+
+  List<Widget> _buildActions() {
+    if (_edit) {
+      return [
+        TextButton(
+          child: const Text('取消'),
+          onPressed: () {
+            setState(() {
+              _edit = false;
+              _selects.clear();
+            });
+          },
+        )
+      ];
+    }
+    return [];
   }
 }
 
 class TaskList extends StatelessWidget {
+  final RxList<UploadTask> tasks;
   final bool edit;
   final Map<int, bool> selects;
   final Function(int index, bool value)? onSelect;
 
-  const TaskList(
-      {Key? key, required this.edit, required this.selects, this.onSelect})
-      : super(key: key);
+  const TaskList({
+    Key? key,
+    required this.tasks,
+    required this.edit,
+    required this.selects,
+    this.onSelect,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    final taskController = Get.put(TaskController());
     return ListView.builder(
-      itemCount: taskController.uploads.length,
+      itemCount: tasks.length,
       itemBuilder: (context, index) {
-        final UploadTask task = taskController.uploads[index];
         return TaskWidget(
-          task: task,
+          task: tasks[index],
           edit: edit,
           select: selects[index] == true,
           onSelect: (value) {
@@ -111,7 +144,11 @@ class TaskWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListTile(
       leading: edit ? Checkbox(value: select, onChanged: onSelect) : null,
-      title: Text(task.remotePath),
+      title: Text(
+        task.remotePath,
+        overflow: TextOverflow.ellipsis,
+        maxLines: 2,
+      ),
       subtitle: Column(
         children: [
           Obx(() => LinearProgressIndicator(value: task.getProgress())),
@@ -140,8 +177,9 @@ class TaskWidget extends StatelessWidget {
     switch (task.state.value) {
       case TaskState.running:
       case TaskState.completed:
-        return Obx(() => Text(
-            '${prettyBytes(task.count.toDouble())}/${prettyBytes(task.total.toDouble())}'));
+        return Obx(
+          () => Text('${prettyBytes(task.count.toDouble())}/${prettyBytes(task.total.toDouble())}'),
+        );
       default:
         return const SizedBox.shrink();
     }

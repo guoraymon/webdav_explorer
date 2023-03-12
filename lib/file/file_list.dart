@@ -1,12 +1,10 @@
 import 'dart:convert';
 
-import 'package:dio/dio.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:mime/mime.dart';
 import 'package:webdav_client/webdav_client.dart';
-import 'package:webdav_explorer/task/task_page.dart';
 
 import '../common/label_button.dart';
 import '../storage/storage.dart';
@@ -148,11 +146,10 @@ class _FileListState extends State<FileList> {
       for (var xFile in list) {
         final uploadPath = [...paths, xFile.name].join('/');
         final uploadTask = UploadTask(storage.client, xFile.path, uploadPath);
-        uploadTask.start();
         taskController.uploads.add(uploadTask);
-
-        Get.toNamed('taskPage');
+        uploadTask.start();
       }
+      Get.toNamed('taskPage');
     });
   }
 

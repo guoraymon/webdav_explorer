@@ -5,34 +5,43 @@ import 'package:get/get.dart';
 import 'package:webdav_client/webdav_client.dart';
 
 enum TaskType {
-  download,
-  upload,
+  download, // 下载任务
+  upload, // 上传任务
 }
 
 enum TaskState {
-  none,
-  running,
-  completed,
-  cancelled,
+  none, // 无状态
+  running, // 运行中
+  completed, // 完成
+  cancelled, // 已取消
 }
 
-class UploadTask extends GetxController {
-  Client client;
+abstract class Task extends GetxController {
+  final Client client; // WebDAV 客户端
+  final TaskType type; // 任务类型
+  final String localPath; // 本地路径
+  final String remotePath; // 远程路径
 
-  Rx<TaskState> state = TaskState.none.obs;
-  String localPath;
-  String remotePath;
-  late CancelToken _cancelToken;
+  final Rx<TaskState> state = TaskState.none.obs; // 当前任务状态（响应式变量）
+  CancelToken? _cancelToken; // 取消令牌
 
-  RxDouble total = 0.0.obs;
-  RxDouble count = 0.0.obs;
-  RxDouble speed = 0.0.obs;
+  RxDouble total = 0.0.obs; // 总数（响应式变量）
+  RxDouble count = 0.0.obs; // 计数（响应式变量）
+  RxDouble speed = 0.0.obs; // 速度（响应式变量）
 
-  Timer? _timer;
-  double _lastCount = 0.0;
+  Timer? _timer; // 定时器
+  double _lastCount = 0.0; // 上次的计数值
 
-  UploadTask(this.client, this.localPath, this.remotePath);
+  Task(this.client, this.type, this.localPath, this.remotePath);
 
+  @override
+  void onClose() {
+    super.onClose();
+    _cancelToken?.cancel();
+    _cancelTimer();
+  }
+
+  /// 开始任务
   void start() {
     state.value = TaskState.running;
     count.value = 0;
@@ -49,8 +58,7 @@ class UploadTask extends GetxController {
         total.value = t.toDouble();
         if (c == t) {
           state.value = TaskState.completed;
-          _timer?.cancel();
-          _timer = null;
+          _cancelTimer();
         }
       },
       cancelToken: _cancelToken,
@@ -62,30 +70,49 @@ class UploadTask extends GetxController {
     });
   }
 
+  /// 取消
   void cancel() {
     state.value = TaskState.cancelled;
-    _cancelToken.cancel();
-    _timer?.cancel();
-    _timer = null;
+    _cancelToken?.cancel();
+    _cancelTimer();
   }
 
   /// 获取进度
   double getProgress() {
-    if (total.value > 0) {
+    if (count.value > 0 && total.value > 0) {
       return count.value / total.value;
     }
     return 0;
   }
 
   /// 获取预计剩余时间
-  getETA() {
-    return (total.value - count.value) ~/ speed.value;
+  int getETA() {
+    if (speed.value > 0) {
+      return (total.value - count.value) ~/ speed.value;
+    }
+    return 0;
+  }
+
+  /// 取消定时器
+  void _cancelTimer() {
+    var timer = _timer;
+    if (timer != null) {
+      timer.cancel();
+      timer = null;
+    }
   }
 }
 
-class TaskController extends GetxController {
-  var uploads = <UploadTask>[].obs;
+class UploadTask extends Task {
+  UploadTask(Client client, localPath, String remotePath) : super(client, TaskType.upload, localPath, remotePath);
+}
 
-  ///dev
-  final downloads = [].obs;
+class DownloadTask extends Task {
+  DownloadTask(Client client, String localPath, String remotePath)
+      : super(client, TaskType.download, localPath, remotePath);
+}
+
+class TaskController extends GetxController {
+  final RxList<UploadTask> uploads = <UploadTask>[].obs;
+  final RxList<UploadTask> downloads = <UploadTask>[].obs;
 }
