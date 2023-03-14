@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:webdav_explorer/router_paths.dart';
 import 'package:webdav_explorer/storage/storage.dart';
 import 'package:webdav_explorer/common/label_button.dart';
 
@@ -75,7 +76,7 @@ class _StorageListState extends State<StorageList> {
                       _select = index;
                     });
                   } else {
-                    Get.toNamed('file_list', arguments: storage);
+                    Get.toNamed(RoutePaths.fileList, arguments: storage);
                   }
                 },
                 onLongPress: () {

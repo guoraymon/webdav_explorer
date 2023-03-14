@@ -5,20 +5,21 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:mime/mime.dart';
 import 'package:webdav_client/webdav_client.dart';
+import 'package:webdav_explorer/router_paths.dart';
 
 import '../common/label_button.dart';
 import '../storage/storage.dart';
 import '../task/task.dart';
 import 'file.dart';
 
-class FileList extends StatefulWidget {
-  const FileList({Key? key}) : super(key: key);
+class FileListPage extends StatefulWidget {
+  const FileListPage({Key? key}) : super(key: key);
 
   @override
-  State<FileList> createState() => _FileListState();
+  State<FileListPage> createState() => _FileListPageState();
 }
 
-class _FileListState extends State<FileList> {
+class _FileListPageState extends State<FileListPage> {
   late Storage storage;
   var paths = [];
   bool _edit = false;
@@ -145,7 +146,7 @@ class _FileListState extends State<FileList> {
           uploadTask.start();
           taskController.addUploadTask(uploadTask);
         }
-        Get.toNamed('taskPage', arguments: {'initialIndex': 0});
+        Get.toNamed(RoutePaths.taskDashboard, arguments: {'initialIndex': 0});
       }
     });
   }
@@ -275,8 +276,7 @@ class _FileListState extends State<FileList> {
                             return;
                           }
 
-                          // final mime = lookupMimeType(file.name!);
-                          Get.toNamed('filePage', arguments: {
+                          Get.toNamed(RoutePaths.fileDetail, arguments: {
                             'file': MyFile(storage.client, file.name ?? '', file.path ?? ''),
                           });
                         }

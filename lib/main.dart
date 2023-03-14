@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:webdav_explorer/file/file.dart';
-import 'package:webdav_explorer/file/file_list.dart';
-import 'package:webdav_explorer/file/file_page.dart';
-import 'package:webdav_explorer/storage/storage_add.dart';
-import 'package:webdav_explorer/storage/storage_edit.dart';
-import 'package:webdav_explorer/storage/storage_list.dart';
-import 'package:webdav_explorer/task/task_page.dart';
+
+import 'file/file.dart';
+import 'file/file_detail_page.dart';
+import 'file/file_list_page.dart';
+import 'router_paths.dart';
+import 'storage/storage_add.dart';
+import 'storage/storage_edit.dart';
+import 'storage/storage_list.dart';
+import 'task/task_page.dart';
 
 void main() {
   runApp(const MyApp());
@@ -28,9 +30,9 @@ class MyApp extends StatelessWidget {
         'storage_list': (context) => const StorageList(),
         'storage_add': (context) => const StorageAdd(),
         'storage_edit': (context) => const StorageEdit(),
-        'file_list': (context) => const FileList(),
-        'filePage': (context) => FilePage(file: Get.arguments['file'] as MyFile),
-        'taskPage': (context) => TaskPage(initialIndex: Get.arguments['initialIndex'] as int),
+        RoutePaths.fileList: (context) => const FileListPage(),
+        RoutePaths.fileDetail: (context) => FileDetailPage(file: Get.arguments['file'] as MyFile),
+        RoutePaths.taskDashboard: (context) => TaskDashboardPage(initialIndex: Get.arguments['initialIndex'] as int),
       },
     );
   }

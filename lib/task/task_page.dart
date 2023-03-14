@@ -5,16 +5,16 @@ import 'package:webdav_explorer/common/helper.dart';
 
 import 'task.dart';
 
-class TaskPage extends StatefulWidget {
+class TaskDashboardPage extends StatefulWidget {
   final int initialIndex;
 
-  const TaskPage({Key? key, this.initialIndex = 0}) : super(key: key);
+  const TaskDashboardPage({Key? key, this.initialIndex = 0}) : super(key: key);
 
   @override
-  State<TaskPage> createState() => _TaskPageState();
+  State<TaskDashboardPage> createState() => _TaskDashboardPageState();
 }
 
-class _TaskPageState extends State<TaskPage> with SingleTickerProviderStateMixin {
+class _TaskDashboardPageState extends State<TaskDashboardPage> with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final TaskController _taskController = Get.put(TaskController());
 
