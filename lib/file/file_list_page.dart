@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:mime/mime.dart';
 import 'package:webdav_client/webdav_client.dart';
-import 'package:webdav_explorer/router_paths.dart';
+import 'package:webdav_explorer/router_names.dart';
 
 import '../common/label_button.dart';
 import '../storage/storage.dart';
@@ -146,7 +146,7 @@ class _FileListPageState extends State<FileListPage> {
           uploadTask.start();
           taskController.addUploadTask(uploadTask);
         }
-        Get.toNamed(RoutePaths.taskDashboard, arguments: {'initialIndex': 0});
+        Get.toNamed(RouteNames.taskDashboard, arguments: {'initialIndex': 0});
       }
     });
   }
@@ -276,7 +276,7 @@ class _FileListPageState extends State<FileListPage> {
                             return;
                           }
 
-                          Get.toNamed(RoutePaths.fileDetail, arguments: {
+                          Get.toNamed(RouteNames.fileDetail, arguments: {
                             'file': MyFile(storage.client, file.name ?? '', file.path ?? ''),
                           });
                         }
