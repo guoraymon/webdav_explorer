@@ -9,6 +9,7 @@ import 'package:webdav_client/webdav_client.dart';
 import '../common/label_button.dart';
 import '../storage/storage.dart';
 import '../task/task.dart';
+import 'file.dart';
 
 class FileList extends StatefulWidget {
   const FileList({Key? key}) : super(key: key);
@@ -38,8 +39,7 @@ class _FileListState extends State<FileList> {
   fetchList() {
     _snapshot = _snapshot.inState(ConnectionState.waiting);
     storage.readDir(paths.join('/')).then((value) {
-      final data =
-          value.where((element) => element.name?.indexOf('.') != 0).toList();
+      final data = value.where((element) => element.name?.indexOf('.') != 0).toList();
       setState(() {
         _snapshot = AsyncSnapshot.withData(ConnectionState.done, data);
       });
@@ -74,9 +74,7 @@ class _FileListState extends State<FileList> {
               onPressed: () {
                 if (formKey.currentState!.validate()) {
                   //TODO::处理请求结果
-                  storage.client
-                      .mkdir([...paths, nameController.text].join('/'))
-                      .then((value) {
+                  storage.client.mkdir([...paths, nameController.text].join('/')).then((value) {
                     setState(() {
                       //TODO::实现单更
                       fetchList();
@@ -113,13 +111,10 @@ class _FileListState extends State<FileList> {
               child: const Text('确定'),
               onPressed: () {
                 Future.wait(list.map((name) {
-                  return storage.client
-                      .remove([...paths, name].join('/'))
-                      .then((value) {
+                  return storage.client.remove([...paths, name].join('/')).then((value) {
                     setState(() {
                       _selects.clear();
-                      _snapshot.data
-                          ?.removeWhere((element) => element.name == name);
+                      _snapshot.data?.removeWhere((element) => element.name == name);
                     });
                   });
                 })).then((value) {
@@ -143,13 +138,15 @@ class _FileListState extends State<FileList> {
   upload() {
     final taskController = Get.put(TaskController());
     openFiles().then((list) {
-      for (var xFile in list) {
-        final uploadPath = [...paths, xFile.name].join('/');
-        final uploadTask = UploadTask(storage.client, xFile.path, uploadPath);
-        taskController.uploads.add(uploadTask);
-        uploadTask.start();
+      if (list.isNotEmpty) {
+        for (var xFile in list) {
+          final uploadPath = [...paths, xFile.name].join('/');
+          final uploadTask = UploadTask(storage.client, xFile.path, uploadPath);
+          uploadTask.start();
+          taskController.addUploadTask(uploadTask);
+        }
+        Get.toNamed('taskPage', arguments: {'initialIndex': 0});
       }
-      Get.toNamed('taskPage');
     });
   }
 
@@ -278,11 +275,10 @@ class _FileListState extends State<FileList> {
                             return;
                           }
 
-                          final mime = lookupMimeType(file.name!);
-                          if (mime?.indexOf('image/') == 0) {
-                            Get.toNamed('file_preview',
-                                arguments: {'storage': storage, 'file': file});
-                          }
+                          // final mime = lookupMimeType(file.name!);
+                          Get.toNamed('filePage', arguments: {
+                            'file': MyFile(storage.client, file.name ?? '', file.path ?? ''),
+                          });
                         }
                       },
                       onLongPress: () {
@@ -296,9 +292,7 @@ class _FileListState extends State<FileList> {
                           alignment: AlignmentDirectional.center,
                           children: [
                             Container(
-                              child: lookupMimeType(file.name!)
-                                          ?.indexOf('image/') ==
-                                      0
+                              child: lookupMimeType(file.name!)?.indexOf('image/') == 0
                                   ? Image.network(
                                       storage.url + file.path!,
                                       headers: {
@@ -308,13 +302,9 @@ class _FileListState extends State<FileList> {
                                       fit: BoxFit.cover,
                                     )
                                   : Column(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
+                                      mainAxisAlignment: MainAxisAlignment.center,
                                       children: [
-                                        Icon(
-                                            file.isDir == true
-                                                ? Icons.folder_rounded
-                                                : Icons.question_mark_rounded,
+                                        Icon(file.isDir == true ? Icons.folder_rounded : Icons.question_mark_rounded,
                                             size: 64),
                                         Text(
                                           file.name!,

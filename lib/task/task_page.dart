@@ -6,7 +6,9 @@ import 'package:webdav_explorer/common/helper.dart';
 import 'task.dart';
 
 class TaskPage extends StatefulWidget {
-  const TaskPage({Key? key}) : super(key: key);
+  final int initialIndex;
+
+  const TaskPage({Key? key, this.initialIndex = 0}) : super(key: key);
 
   @override
   State<TaskPage> createState() => _TaskPageState();
@@ -14,7 +16,7 @@ class TaskPage extends StatefulWidget {
 
 class _TaskPageState extends State<TaskPage> with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  late TaskController _taskController;
+  final TaskController _taskController = Get.put(TaskController());
 
   bool _edit = false;
   final Map<int, bool> _selects = {};
@@ -22,8 +24,7 @@ class _TaskPageState extends State<TaskPage> with SingleTickerProviderStateMixin
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(vsync: this, length: 2);
-    _taskController = Get.put(TaskController());
+    _tabController = TabController(vsync: this, length: 2, initialIndex: widget.initialIndex);
   }
 
   @override
@@ -95,7 +96,7 @@ class _TaskPageState extends State<TaskPage> with SingleTickerProviderStateMixin
 }
 
 class TaskList extends StatelessWidget {
-  final RxList<UploadTask> tasks;
+  final RxList<Task> tasks;
   final bool edit;
   final Map<int, bool> selects;
   final Function(int index, bool value)? onSelect;
@@ -135,7 +136,7 @@ class TaskWidget extends StatelessWidget {
     this.onSelect,
   }) : super(key: key);
 
-  final UploadTask task;
+  final Task task;
   final bool edit;
   final bool select;
   final ValueChanged<bool?>? onSelect;
@@ -145,7 +146,7 @@ class TaskWidget extends StatelessWidget {
     return ListTile(
       leading: edit ? Checkbox(value: select, onChanged: onSelect) : null,
       title: Text(
-        task.remotePath,
+        task.type == TaskType.upload ? task.remotePath : task.localPath,
         overflow: TextOverflow.ellipsis,
         maxLines: 2,
       ),

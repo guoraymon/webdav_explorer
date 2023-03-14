@@ -50,19 +50,33 @@ abstract class Task extends GetxController {
     _lastCount = 0;
 
     _cancelToken = CancelToken();
-    client.writeFromFile(
-      localPath,
-      remotePath,
-      onProgress: (c, t) {
-        count.value = c.toDouble();
-        total.value = t.toDouble();
-        if (c == t) {
-          state.value = TaskState.completed;
-          _cancelTimer();
-        }
-      },
-      cancelToken: _cancelToken,
-    );
+    onProgress(c, t) {
+      count.value = c.toDouble();
+      total.value = t.toDouble();
+      if (c == t) {
+        state.value = TaskState.completed;
+        _cancelTimer();
+      }
+    }
+
+    switch (type) {
+      case TaskType.upload:
+        client.writeFromFile(
+          localPath,
+          remotePath,
+          onProgress: onProgress,
+          cancelToken: _cancelToken,
+        );
+        break;
+      case TaskType.download:
+        client.read2File(
+          remotePath,
+          localPath,
+          onProgress: onProgress,
+          cancelToken: _cancelToken,
+        );
+        break;
+    }
 
     _timer ??= Timer.periodic(const Duration(seconds: 1), (_) {
       speed.value = count.value - _lastCount;
@@ -114,5 +128,13 @@ class DownloadTask extends Task {
 
 class TaskController extends GetxController {
   final RxList<UploadTask> uploads = <UploadTask>[].obs;
-  final RxList<UploadTask> downloads = <UploadTask>[].obs;
+  final RxList<DownloadTask> downloads = <DownloadTask>[].obs;
+
+  addUploadTask(uploadTask) {
+    uploads.add(uploadTask);
+  }
+
+  addDownTask(downTask) {
+    downloads.add(downTask);
+  }
 }
