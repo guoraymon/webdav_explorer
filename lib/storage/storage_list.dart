@@ -76,7 +76,7 @@ class _StorageListState extends State<StorageList> {
                       _select = index;
                     });
                   } else {
-                    Get.toNamed(RouteNames.fileList, arguments: storage);
+                    Get.toNamed(RouteNames.fileList, arguments: {'storage': storage});
                   }
                 },
                 onLongPress: () {
@@ -97,8 +97,7 @@ class _StorageListState extends State<StorageList> {
                       icon: Icons.edit_rounded,
                       label: '编辑',
                       onTap: () {
-                        Get.toNamed('storage_edit', arguments: _select)
-                            ?.then((res) {
+                        Get.toNamed('storage_edit', arguments: _select)?.then((res) {
                           if (res) {
                             setState(() {
                               _edit = false;
@@ -123,22 +122,17 @@ class _StorageListState extends State<StorageList> {
                                 TextButton(
                                     child: const Text('确认'),
                                     onPressed: () {
-                                      storageController
-                                          .del(_select)
-                                          .then((value) {
+                                      storageController.del(_select).then((value) {
                                         setState(() {
                                           _edit = false;
                                         });
-                                        ScaffoldMessenger.of(context)
-                                            .showSnackBar(
+                                        ScaffoldMessenger.of(context).showSnackBar(
                                           const SnackBar(content: Text('删除成功')),
                                         );
                                       });
                                       Get.back();
                                     }),
-                                TextButton(
-                                    child: const Text('取消'),
-                                    onPressed: () => Get.back()),
+                                TextButton(child: const Text('取消'), onPressed: () => Get.back()),
                               ],
                             );
                           },

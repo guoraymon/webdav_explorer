@@ -4,10 +4,15 @@ enum FileType { text, image, music, video, unknown }
 
 class MyFile {
   Client client;
-  String name;
-  String path;
+  late String name;
+  late String path;
+  late DateTime? mTime;
 
-  MyFile(this.client, this.name, this.path);
+  MyFile(this.client, File file) {
+    name = file.name ?? '';
+    path = file.path ?? '';
+    mTime = file.mTime;
+  }
 
   FileType get type {
     final ext = name.split('.').last.toLowerCase();

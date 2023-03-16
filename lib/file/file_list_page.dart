@@ -3,43 +3,41 @@ import 'dart:convert';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
 import 'package:mime/mime.dart';
 import 'package:webdav_client/webdav_client.dart';
 import 'package:webdav_explorer/router_names.dart';
+import 'package:webdav_explorer/storage/storage.dart';
 
 import '../common/label_button.dart';
-import '../storage/storage.dart';
 import '../task/task.dart';
 import 'file.dart';
 
 class FileListPage extends StatefulWidget {
-  const FileListPage({Key? key}) : super(key: key);
+  final Storage storage;
+
+  const FileListPage({Key? key, required this.storage}) : super(key: key);
 
   @override
   State<FileListPage> createState() => _FileListPageState();
 }
 
 class _FileListPageState extends State<FileListPage> {
-  late Storage storage;
   var paths = [];
+  AsyncSnapshot<List<File>> _snapshot = const AsyncSnapshot.nothing();
+
   bool _edit = false;
   final _selects = {};
-
-  late AsyncSnapshot<List<File>> _snapshot;
 
   @override
   initState() {
     super.initState();
-    storage = Get.arguments as Storage;
-    setState(() {
-      _snapshot = const AsyncSnapshot.nothing();
-    });
     fetchList();
   }
 
   fetchList() {
     _snapshot = _snapshot.inState(ConnectionState.waiting);
-    storage.readDir(paths.join('/')).then((value) {
+    widget.storage.client.readDir(paths.join('/')).then((value) {
       final data = value.where((element) => element.name?.indexOf('.') != 0).toList();
       setState(() {
         _snapshot = AsyncSnapshot.withData(ConnectionState.done, data);
@@ -75,7 +73,7 @@ class _FileListPageState extends State<FileListPage> {
               onPressed: () {
                 if (formKey.currentState!.validate()) {
                   //TODO::处理请求结果
-                  storage.client.mkdir([...paths, nameController.text].join('/')).then((value) {
+                  widget.storage.client.mkdir([...paths, nameController.text].join('/')).then((value) {
                     setState(() {
                       //TODO::实现单更
                       fetchList();
@@ -112,7 +110,7 @@ class _FileListPageState extends State<FileListPage> {
               child: const Text('确定'),
               onPressed: () {
                 Future.wait(list.map((name) {
-                  return storage.client.remove([...paths, name].join('/')).then((value) {
+                  return widget.storage.client.remove([...paths, name].join('/')).then((value) {
                     setState(() {
                       _selects.clear();
                       _snapshot.data?.removeWhere((element) => element.name == name);
@@ -142,7 +140,7 @@ class _FileListPageState extends State<FileListPage> {
       if (list.isNotEmpty) {
         for (var xFile in list) {
           final uploadPath = [...paths, xFile.name].join('/');
-          final uploadTask = UploadTask(storage.client, xFile.path, uploadPath);
+          final uploadTask = UploadTask(widget.storage.client, xFile.path, uploadPath);
           uploadTask.start();
           taskController.addUploadTask(uploadTask);
         }
@@ -150,8 +148,6 @@ class _FileListPageState extends State<FileListPage> {
       }
     });
   }
-
-  test() {}
 
   @override
   Widget build(BuildContext context) {
@@ -177,7 +173,7 @@ class _FileListPageState extends State<FileListPage> {
       },
       child: Scaffold(
         appBar: AppBar(
-          title: Text(paths.isNotEmpty ? paths.last : storage.name),
+          title: Text(paths.isNotEmpty ? paths.last : widget.storage.name),
           actions: [
             _edit
                 ? TextButton(
@@ -191,16 +187,10 @@ class _FileListPageState extends State<FileListPage> {
                   )
                 : Row(
                     children: [
-                      TextButton(
-                        onPressed: () {
-                          Future.delayed(Duration.zero, () => test());
-                        },
-                        child: const Text('测试'),
-                      ),
                       IconButton(
                         icon: const Icon(Icons.task_rounded),
                         onPressed: () {
-                          Get.toNamed('taskPage');
+                          Get.toNamed(RouteNames.taskDashboard);
                         },
                       ),
                       PopupMenuButton(
@@ -245,99 +235,38 @@ class _FileListPageState extends State<FileListPage> {
                 }
 
                 final list = _snapshot.data ?? [];
-                return GridView.builder(
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 3,
-                    mainAxisSpacing: 8,
-                    crossAxisSpacing: 8,
-                  ),
+                return ListView.builder(
                   itemCount: list.length,
                   itemBuilder: (context, index) {
-                    final file = list[index];
-                    return InkWell(
-                      onTap: () {
-                        if (_edit) {
-                          setState(() {
-                            if (_selects[index] == true) {
-                              _selects.remove(index);
-                            } else {
-                              _selects[index] = true;
-                            }
-                          });
-                        } else {
-                          if (file.isDir == true) {
-                            setState(() {
-                              paths.add(file.name);
-                            });
-                            fetchList();
-                            // _getData().then((value) => setState((){
-                            //   list = value;
-                            // }));
-                            return;
-                          }
-
-                          Get.toNamed(RouteNames.fileDetail, arguments: {
-                            'file': MyFile(storage.client, file.name ?? '', file.path ?? ''),
-                          });
-                        }
-                      },
-                      onLongPress: () {
+                    final myFile = MyFile(widget.storage.client, list[index]);
+                    return FileWidget(
+                      file: myFile,
+                      edit: _edit,
+                      select: _selects[index] == true,
+                      onSelect: (value) {
                         setState(() {
                           _edit = true;
-                          _selects[index] = true;
+                          _selects[index] = value;
                         });
                       },
-                      child: GridTile(
-                        child: Stack(
-                          alignment: AlignmentDirectional.center,
-                          children: [
-                            Container(
-                              child: lookupMimeType(file.name!)?.indexOf('image/') == 0
-                                  ? Image.network(
-                                      storage.url + file.path!,
-                                      headers: {
-                                        'Authorization':
-                                            'Basic ${base64Encode(utf8.encode('${storage.user}:${storage.pwd}'))}',
-                                      },
-                                      fit: BoxFit.cover,
-                                    )
-                                  : Column(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        Icon(file.isDir == true ? Icons.folder_rounded : Icons.question_mark_rounded,
-                                            size: 64),
-                                        Text(
-                                          file.name!,
-                                          textAlign: TextAlign.center,
-                                        ),
-                                      ],
-                                    ),
-                            ),
-                            if (_edit)
-                              Positioned(
-                                top: 0,
-                                left: 0,
-                                child: Checkbox(
-                                  value: _selects[index] ?? false,
-                                  onChanged: (bool? value) {},
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
+                      onTap: () {
+                        if (list[index].isDir == true) {
+                          setState(() {
+                            paths.add(list[index].name);
+                          });
+                          fetchList();
+                          return;
+                        }
+
+                        Get.toNamed(RouteNames.fileDetail, arguments: {
+                          'file': MyFile(widget.storage.client, list[index]),
+                        });
+                      },
                     );
                   },
                 );
             }
           }(),
-          // child: FutureBuilder(
-          //   future: _futureBuilderFuture,
-          //   builder:
-          //       (BuildContext context, AsyncSnapshot<List<File>> snapshot) {
-          //     var list = snapshot.data ?? [];
-
-          //   },
-          // ),
         ),
         bottomNavigationBar: _edit
             ? Row(
@@ -375,6 +304,91 @@ class _FileListPageState extends State<FileListPage> {
               )
             : null,
       ),
+    );
+  }
+}
+
+class FileWidget extends StatelessWidget {
+  const FileWidget({
+    Key? key,
+    required this.file,
+    this.edit = false,
+    this.select = false,
+    this.onSelect,
+    this.onTap,
+  }) : super(key: key);
+
+  final MyFile file;
+  final bool edit;
+  final bool select;
+  final ValueChanged<bool?>? onSelect;
+  final GestureTapCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final Icon icon = () {
+      switch (file.type) {
+        case FileType.text:
+          {
+            return const Icon(Icons.text_format_rounded);
+          }
+        case FileType.image:
+          {
+            return const Icon(Icons.image_rounded);
+          }
+        case FileType.music:
+          {
+            return const Icon(Icons.audio_file_rounded);
+          }
+        case FileType.video:
+          {
+            return const Icon(Icons.video_file_rounded);
+          }
+        default:
+          {
+            return const Icon(Icons.file_present_rounded);
+          }
+      }
+    }();
+    final datetime = file.mTime != null ? DateFormat('yyyy-MM-dd HH:mm:ss').format(file.mTime!) : '';
+    // return InkWell(
+    //   child: Row(
+    //     children: [
+    //       edit ? Checkbox(value: select, onChanged: onSelect) : const SizedBox.shrink(),
+    //       icon,
+    //       Column(
+    //         children: [
+    //           Text(file.name, overflow: TextOverflow.ellipsis, maxLines: 1),
+    //           Text(datetime),
+    //         ],
+    //       )
+    //     ],
+    //   ),
+    //   onTap: () {
+    //     if (edit) {
+    //       onSelect!(!select);
+    //     } else {
+    //       onTap!();
+    //     }
+    //   },
+    //   onLongPress: () {
+    //     onSelect!(true);
+    //   },
+    // );
+    return ListTile(
+      leading: icon,
+      title: Text(file.name, overflow: TextOverflow.ellipsis, maxLines: 1),
+      subtitle: Text(datetime),
+      onTap: () {
+        if (edit) {
+          onSelect!(!select);
+        } else {
+          onTap!();
+        }
+      },
+      onLongPress: () {
+        onSelect!(true);
+      },
     );
   }
 }
