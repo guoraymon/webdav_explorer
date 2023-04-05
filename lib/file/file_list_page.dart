@@ -1,10 +1,7 @@
-import 'dart:convert';
-
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
-import 'package:mime/mime.dart';
 import 'package:webdav_client/webdav_client.dart';
 import 'package:webdav_explorer/router_names.dart';
 import 'package:webdav_explorer/storage/storage.dart';
@@ -223,10 +220,10 @@ class _FileListPageState extends State<FileListPage> {
                 return const Center(child: CircularProgressIndicator());
               case ConnectionState.done:
                 if (_snapshot.hasError) {
-                  return Center(
+                  return const Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
-                      children: const [
+                      children: [
                         Icon(Icons.error, color: Colors.red, size: 32),
                         Text('连接失败'),
                       ],
@@ -309,6 +306,12 @@ class _FileListPageState extends State<FileListPage> {
 }
 
 class FileWidget extends StatelessWidget {
+  final MyFile file;
+  final bool edit;
+  final bool select;
+  final ValueChanged<bool?>? onSelect;
+  final GestureTapCallback? onTap;
+
   const FileWidget({
     Key? key,
     required this.file,
@@ -318,67 +321,24 @@ class FileWidget extends StatelessWidget {
     this.onTap,
   }) : super(key: key);
 
-  final MyFile file;
-  final bool edit;
-  final bool select;
-  final ValueChanged<bool?>? onSelect;
-  final GestureTapCallback? onTap;
-
   @override
   Widget build(BuildContext context) {
-    final Icon icon = () {
-      switch (file.type) {
-        case FileType.text:
-          {
-            return const Icon(Icons.text_format_rounded);
-          }
-        case FileType.image:
-          {
-            return const Icon(Icons.image_rounded);
-          }
-        case FileType.music:
-          {
-            return const Icon(Icons.audio_file_rounded);
-          }
-        case FileType.video:
-          {
-            return const Icon(Icons.video_file_rounded);
-          }
-        default:
-          {
-            return const Icon(Icons.file_present_rounded);
-          }
-      }
-    }();
     final datetime = file.mTime != null ? DateFormat('yyyy-MM-dd HH:mm:ss').format(file.mTime!) : '';
-    // return InkWell(
-    //   child: Row(
-    //     children: [
-    //       edit ? Checkbox(value: select, onChanged: onSelect) : const SizedBox.shrink(),
-    //       icon,
-    //       Column(
-    //         children: [
-    //           Text(file.name, overflow: TextOverflow.ellipsis, maxLines: 1),
-    //           Text(datetime),
-    //         ],
-    //       )
-    //     ],
-    //   ),
-    //   onTap: () {
-    //     if (edit) {
-    //       onSelect!(!select);
-    //     } else {
-    //       onTap!();
-    //     }
-    //   },
-    //   onLongPress: () {
-    //     onSelect!(true);
-    //   },
-    // );
     return ListTile(
-      leading: icon,
-      title: Text(file.name, overflow: TextOverflow.ellipsis, maxLines: 1),
-      subtitle: Text(datetime),
+      leading: edit ? Checkbox(value: select, onChanged: onSelect) : null,
+      title: Row(
+        children: [
+          FileIconWidget(file: file),
+          const SizedBox(width: 16),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(file.name, overflow: TextOverflow.ellipsis, maxLines: 1),
+              Text(datetime),
+            ],
+          )
+        ],
+      ),
       onTap: () {
         if (edit) {
           onSelect!(!select);
@@ -390,5 +350,40 @@ class FileWidget extends StatelessWidget {
         onSelect!(true);
       },
     );
+  }
+}
+
+class FileIconWidget extends StatelessWidget {
+  final MyFile file;
+
+  const FileIconWidget({Key? key, required this.file}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    if (file.isDir == true) {
+      return const Icon(Icons.folder_rounded);
+    }
+    switch (file.type) {
+      case FileType.text:
+        {
+          return const Icon(Icons.text_format_rounded);
+        }
+      case FileType.image:
+        {
+          return const Icon(Icons.image_rounded);
+        }
+      case FileType.music:
+        {
+          return const Icon(Icons.audio_file_rounded);
+        }
+      case FileType.video:
+        {
+          return const Icon(Icons.video_file_rounded);
+        }
+      default:
+        {
+          return const Icon(Icons.insert_drive_file_rounded);
+        }
+    }
   }
 }

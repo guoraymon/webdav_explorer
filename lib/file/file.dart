@@ -7,11 +7,13 @@ class MyFile {
   late String name;
   late String path;
   late DateTime? mTime;
+  late bool? isDir;
 
   MyFile(this.client, File file) {
     name = file.name ?? '';
     path = file.path ?? '';
     mTime = file.mTime;
+    isDir = file.isDir;
   }
 
   FileType get type {
