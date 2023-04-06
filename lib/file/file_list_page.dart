@@ -24,7 +24,7 @@ class _FileListPageState extends State<FileListPage> {
   AsyncSnapshot<List<File>> _snapshot = const AsyncSnapshot.nothing();
 
   bool _edit = false;
-  final _selects = {};
+  final Map<int, bool> _selects = {};
 
   @override
   initState() {
@@ -42,8 +42,8 @@ class _FileListPageState extends State<FileListPage> {
     });
   }
 
-  /// Create folder
-  mkdir() {
+  /// 创建文件夹
+  onMkdir() {
     showDialog(
       context: context,
       builder: (context) {
@@ -55,7 +55,6 @@ class _FileListPageState extends State<FileListPage> {
             key: formKey,
             child: TextFormField(
               controller: nameController,
-              decoration: const InputDecoration(labelText: '文件夹名称'),
               validator: (value) {
                 if (value == null || value.isEmpty) {
                   return '文件夹名称不能为空';
@@ -66,7 +65,11 @@ class _FileListPageState extends State<FileListPage> {
           ),
           actions: [
             TextButton(
-              child: const Text('确定'),
+              child: const Text('取消'),
+              onPressed: () => Navigator.pop(context),
+            ),
+            TextButton(
+              child: const Text('创建'),
               onPressed: () {
                 if (formKey.currentState!.validate()) {
                   //TODO::处理请求结果
@@ -89,22 +92,22 @@ class _FileListPageState extends State<FileListPage> {
     );
   }
 
-  /// Remove a folder or file
-  remove() {
+  /// 删除文件夹或文件
+  onRemove() {
     showDialog(
       context: context,
       builder: (context) {
         final list = _selects.entries.map((e) => _snapshot.data![e.key].name);
         return AlertDialog(
-          title: const Text('删除文件'),
-          content: Text('确定要删除 ${list.join(',')} ?'),
+          title: const Text('删除文件夹或文件'),
+          content: Text('确定要删除 ${list.join(', ')}，共计 ${_selects.length} 个文件夹或文件?'),
           actions: [
             TextButton(
               child: const Text('取消'),
               onPressed: () => Navigator.pop(context),
             ),
             TextButton(
-              child: const Text('确定'),
+              child: const Text('删除'),
               onPressed: () {
                 Future.wait(list.map((name) {
                   return widget.storage.client.remove([...paths, name].join('/')).then((value) {
@@ -122,6 +125,55 @@ class _FileListPageState extends State<FileListPage> {
                   );
                   Navigator.pop(context);
                 });
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  /// 重命名文件夹或文件
+  onRename() {
+    final file = _snapshot.data![_selects.entries.firstWhere((element) => element.value == true).key];
+    showDialog(
+      context: context,
+      builder: (context) {
+        final formKey = GlobalKey<FormState>();
+        final nameController = TextEditingController(text: file.name);
+        return AlertDialog(
+          title: file.isDir == true ? const Text('重命名文件夹') : const Text('重命名文件'),
+          content: Form(
+            key: formKey,
+            child: TextFormField(
+              controller: nameController,
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return file.isDir == true ? '文件名称不能为空' : '文件名不能为空';
+                }
+                return null;
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              child: const Text('取消'),
+              onPressed: () => Navigator.pop(context),
+            ),
+            TextButton(
+              child: const Text('重命名'),
+              onPressed: () {
+                if (formKey.currentState!.validate()) {
+                  widget.storage.client.rename(file.path!, [...paths, nameController.text].join('/'), true).then(
+                    (value) {
+                      fetchList();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('重命名成功')),
+                      );
+                      Navigator.pop(context);
+                    },
+                  );
+                }
               },
             ),
           ],
@@ -194,7 +246,7 @@ class _FileListPageState extends State<FileListPage> {
                         itemBuilder: (BuildContext context1) => [
                           PopupMenuItem(
                             onTap: () {
-                              Future.delayed(Duration.zero, () => mkdir());
+                              Future.delayed(Duration.zero, () => onMkdir());
                             },
                             child: const Text('新建文件夹'),
                           ),
@@ -243,7 +295,7 @@ class _FileListPageState extends State<FileListPage> {
                       onSelect: (value) {
                         setState(() {
                           _edit = true;
-                          _selects[index] = value;
+                          _selects[index] = value!;
                         });
                       },
                       onTap: () {
@@ -270,6 +322,13 @@ class _FileListPageState extends State<FileListPage> {
                 children: [
                   Expanded(
                     child: LabelButton(
+                      icon: Icons.drive_file_rename_outline_rounded,
+                      label: '重命名',
+                      onTap: onRename,
+                    ),
+                  ),
+                  Expanded(
+                    child: LabelButton(
                       icon: Icons.move_up_rounded,
                       label: '移动',
                       onTap: _selects.isNotEmpty
@@ -294,7 +353,7 @@ class _FileListPageState extends State<FileListPage> {
                     child: LabelButton(
                       icon: Icons.delete_rounded,
                       label: '删除',
-                      onTap: _selects.isNotEmpty ? remove : null,
+                      onTap: _selects.isNotEmpty ? onRemove : null,
                     ),
                   ),
                 ],
