@@ -3,12 +3,25 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:webdav_client/webdav_client.dart';
+import 'package:webdav_explorer/common/label_button.dart';
 import 'package:webdav_explorer/router_names.dart';
 import 'package:webdav_explorer/storage/storage.dart';
+import 'package:webdav_explorer/task/task.dart';
 
-import '../common/label_button.dart';
-import '../task/task.dart';
 import 'file.dart';
+
+/// 文件列表模式
+enum FileListMode {
+  view,
+  edit,
+  clip,
+}
+
+/// 剪贴方式
+enum ClipMethod {
+  copy,
+  move,
+}
 
 class FileListPage extends StatefulWidget {
   final Storage storage;
@@ -20,10 +33,15 @@ class FileListPage extends StatefulWidget {
 }
 
 class _FileListPageState extends State<FileListPage> {
+  FileListMode mode = FileListMode.view;
+
+  // 剪贴模式
+  late ClipMethod _clipMethod;
+  late List<String> _clipItems;
+
   var paths = [];
   AsyncSnapshot<List<File>> _snapshot = const AsyncSnapshot.nothing();
 
-  bool _edit = false;
   final Map<int, bool> _selects = {};
 
   @override
@@ -92,15 +110,15 @@ class _FileListPageState extends State<FileListPage> {
     );
   }
 
-  /// 删除文件夹或文件
+  /// 删除文件或文件夹
   onRemove() {
     showDialog(
       context: context,
       builder: (context) {
         final list = _selects.entries.map((e) => _snapshot.data![e.key].name);
         return AlertDialog(
-          title: const Text('删除文件夹或文件'),
-          content: Text('确定要删除 ${list.join(', ')}，共计 ${_selects.length} 个文件夹或文件?'),
+          title: const Text('删除文件或文件夹'),
+          content: Text('确定要删除 ${list.join(', ')}，共计 ${_selects.length} 个文件或文件夹?'),
           actions: [
             TextButton(
               child: const Text('取消'),
@@ -118,7 +136,7 @@ class _FileListPageState extends State<FileListPage> {
                   });
                 })).then((value) {
                   setState(() {
-                    _edit = false;
+                    mode = FileListMode.view;
                   });
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('删除成功')),
@@ -133,7 +151,7 @@ class _FileListPageState extends State<FileListPage> {
     );
   }
 
-  /// 重命名文件夹或文件
+  /// 重命名文件或文件夹
   onRename() {
     final file = _snapshot.data![_selects.entries.firstWhere((element) => element.value == true).key];
     showDialog(
@@ -182,8 +200,44 @@ class _FileListPageState extends State<FileListPage> {
     );
   }
 
+  /// 拷贝文件或文件夹
+  onCopy() {
+    final items = _selects.entries.expand((element) sync* {
+      final file = _snapshot.data![element.key];
+      if (file.path != null) {
+        yield file.path as String;
+      }
+    }).toList();
+
+    setState(() {
+      mode = FileListMode.clip;
+      _clipMethod = ClipMethod.copy;
+      _clipItems = items;
+      _selects.clear();
+    });
+  }
+
+  /// 移动文件或文件夹
+  onMove() {
+    final items = _selects.entries.expand((element) sync* {
+      final file = _snapshot.data![element.key];
+      if (file.path != null) {
+        yield file.path as String;
+      }
+    }).toList();
+
+    setState(() {
+      mode = FileListMode.clip;
+      _clipMethod = ClipMethod.move;
+      _clipItems = items;
+    });
+  }
+
+  /// 粘贴文件或文件
+  onPaste() {}
+
   /// Remove a folder or file
-  upload() {
+  onUpload() {
     final taskController = Get.put(TaskController());
     openFiles().then((list) {
       if (list.isNotEmpty) {
@@ -202,9 +256,9 @@ class _FileListPageState extends State<FileListPage> {
   Widget build(BuildContext context) {
     return WillPopScope(
       onWillPop: () async {
-        if (_edit) {
+        if (mode == FileListMode.edit) {
           setState(() {
-            _edit = false;
+            mode = FileListMode.view;
             _selects.clear();
           });
           return false;
@@ -224,11 +278,11 @@ class _FileListPageState extends State<FileListPage> {
         appBar: AppBar(
           title: Text(paths.isNotEmpty ? paths.last : widget.storage.name),
           actions: [
-            _edit
+            mode == FileListMode.edit
                 ? TextButton(
                     onPressed: () {
                       setState(() {
-                        _edit = false;
+                        mode = FileListMode.view;
                         _selects.clear();
                       });
                     },
@@ -253,7 +307,7 @@ class _FileListPageState extends State<FileListPage> {
                           PopupMenuItem(
                             child: const Text('上传文件'),
                             onTap: () {
-                              Future.delayed(Duration.zero, () => upload());
+                              Future.delayed(Duration.zero, () => onUpload());
                             },
                           ),
                         ],
@@ -290,11 +344,11 @@ class _FileListPageState extends State<FileListPage> {
                     final myFile = MyFile(widget.storage.client, list[index]);
                     return FileWidget(
                       file: myFile,
-                      edit: _edit,
+                      edit: mode == FileListMode.edit,
                       select: _selects[index] == true,
                       onSelect: (value) {
                         setState(() {
-                          _edit = true;
+                          mode = FileListMode.edit;
                           _selects[index] = value!;
                         });
                       },
@@ -317,50 +371,79 @@ class _FileListPageState extends State<FileListPage> {
             }
           }(),
         ),
-        bottomNavigationBar: _edit
-            ? Row(
-                children: [
-                  Expanded(
-                    child: LabelButton(
-                      icon: Icons.drive_file_rename_outline_rounded,
-                      label: '重命名',
-                      onTap: onRename,
-                    ),
-                  ),
-                  Expanded(
-                    child: LabelButton(
-                      icon: Icons.move_up_rounded,
-                      label: '移动',
-                      onTap: _selects.isNotEmpty
-                          ? () {
-                              print('移动');
-                            }
-                          : null,
-                    ),
-                  ),
-                  Expanded(
-                    child: LabelButton(
-                      icon: Icons.copy_rounded,
-                      label: '复制',
-                      onTap: _selects.isNotEmpty
-                          ? () {
-                              print('复制');
-                            }
-                          : null,
-                    ),
-                  ),
-                  Expanded(
-                    child: LabelButton(
-                      icon: Icons.delete_rounded,
-                      label: '删除',
-                      onTap: _selects.isNotEmpty ? onRemove : null,
-                    ),
-                  ),
-                ],
-              )
-            : null,
+        bottomNavigationBar: _buildBottomBar(),
       ),
     );
+  }
+
+  _buildBottomBar() {
+    switch (mode) {
+      case FileListMode.view:
+        // TODO: Handle this case.
+        break;
+      case FileListMode.edit:
+        {
+          return Row(
+            children: [
+              Expanded(
+                child: LabelButton(
+                  icon: Icons.drive_file_rename_outline_rounded,
+                  label: '重命名',
+                  onTap: onRename,
+                ),
+              ),
+              Expanded(
+                child: LabelButton(
+                  icon: Icons.copy_rounded,
+                  label: '复制',
+                  onTap: onCopy,
+                ),
+              ),
+              Expanded(
+                child: LabelButton(
+                  icon: Icons.move_up_rounded,
+                  label: '移动',
+                  onTap: onMove,
+                ),
+              ),
+              Expanded(
+                child: LabelButton(
+                  icon: Icons.delete_rounded,
+                  label: '删除',
+                  onTap: _selects.isNotEmpty ? onRemove : null,
+                ),
+              ),
+            ],
+          );
+        }
+      case FileListMode.clip:
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Text("${_clipItems.length} 个文件"),
+              Row(
+                children: [
+                  TextButton(
+                    child: const Text('取消'),
+                    onPressed: () {
+                      setState(() {
+                        mode = FileListMode.view;
+                      });
+                    },
+                  ),
+                  TextButton(
+                    onPressed: onPaste,
+                    child: const Text('复制到此处'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+    }
   }
 }
 
@@ -389,13 +472,15 @@ class FileWidget extends StatelessWidget {
         children: [
           FileIconWidget(file: file),
           const SizedBox(width: 16),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(file.name, overflow: TextOverflow.ellipsis, maxLines: 1),
-              Text(datetime),
-            ],
-          )
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(file.name, overflow: TextOverflow.ellipsis, maxLines: 1),
+                Text(datetime),
+              ],
+            ),
+          ),
         ],
       ),
       onTap: () {
