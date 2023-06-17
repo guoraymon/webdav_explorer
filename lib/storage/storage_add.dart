@@ -79,22 +79,10 @@ class _StorageAddState extends State<StorageAdd> {
                 TextFormField(
                   controller: userController,
                   decoration: const InputDecoration(labelText: '用户名'),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return '请输入储存库用户名';
-                    }
-                    return null;
-                  },
                 ),
                 TextFormField(
                   controller: pwdController,
                   decoration: const InputDecoration(labelText: '密码'),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return '请输入储存库密码';
-                    }
-                    return null;
-                  },
                 ),
               ],
             ),
